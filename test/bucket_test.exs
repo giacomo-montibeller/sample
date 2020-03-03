@@ -1,12 +1,24 @@
 defmodule BucketTest do
   use ExUnit.Case, async: true
 
-  test "stores values by key" do
+  setup do
     {:ok, bucket} = Sample.Bucket.start_link([])
-    assert Sample.Bucket.get(bucket, "milk") == nil
+    %{bucket: bucket}
+  end
 
+  test "stores values by key", %{bucket: bucket} do
+    assert Sample.Bucket.get(bucket, "milk") == nil
+  end
+
+  test "insert element in bucket", %{bucket: bucket} do
     Sample.Bucket.put(bucket, "milk", 3)
     assert Sample.Bucket.get(bucket, "milk") == 3
+  end
+
+  test "remove element from bucket", %{bucket: bucket} do
+    Sample.Bucket.put(bucket, "milk", 3)
+    Sample.Bucket.remove(bucket, "milk")
+    assert Sample.Bucket.get(bucket, "milk") == nil
   end
 
 end
