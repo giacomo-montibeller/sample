@@ -7,47 +7,47 @@ defmodule Sample.Registry do
     GenServer.start_link(__MODULE__, :ok, opts)
   end
 
-  def lookup(registry, name) do
-    GenServer.call(registry, {:lookup, name})
+  def lookup(registry, key) do
+    GenServer.call(registry, {:lookup, key})
   end
 
-  def create(registry, name) do
-    GenServer.cast(registry, {:create, name})
+  def create(registry, key) do
+    GenServer.cast(registry, {:create, key})
   end
 
   # Server
 
   @impl true
   def init(:ok) do
-    names = %{}
+    buckets = %{}
     refs = %{}
-    {:ok, {names, refs}}
+    {:ok, {buckets, refs}}
   end
 
   @impl true
-  def handle_call({:lookup, name}, _, state) do
-    {names, _} = state
-    {:reply, Map.fetch(names, name), state}
+  def handle_call({:lookup, key}, _, state) do
+    {buckets, _} = state
+    {:reply, Map.fetch(buckets, key), state}
   end
 
   @impl true
-  def handle_cast({:create, name}, {names, refs}) do
-    if Map.has_key?(names, name) do
-      {:noreply, {names, refs}}
+  def handle_cast({:create, key}, {buckets, refs}) do
+    if Map.has_key?(buckets, key) do
+      {:noreply, {buckets, refs}}
     else
       {:ok, bucket} = Sample.Bucket.start_link([])
       ref = Process.monitor(bucket)
-      refs = Map.put(refs, ref, name)
-      names = Map.put(names, name, bucket)
-      {:noreply, {names, refs}}
+      refs = Map.put(refs, ref, key)
+      buckets = Map.put(buckets, key, bucket)
+      {:noreply, {buckets, refs}}
     end
   end
 
   @impl true
-  def handle_info({:DOWN, ref, :process, _, _}, {names, refs}) do
-    {name, refs} = Map.pop(refs, ref)
-    names = Map.delete(names, name)
-    {:noreply, {names, refs}}
+  def handle_info({:DOWN, ref, :process, _, _}, {buckets, refs}) do
+    {key, refs} = Map.pop(refs, ref)
+    buckets = Map.delete(buckets, key)
+    {:noreply, {buckets, refs}}
   end
 
   @impl true
