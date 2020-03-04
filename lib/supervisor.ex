@@ -7,7 +7,10 @@ defmodule Sample.Supervisor do
 
   @impl true
   def init(:ok) do
-    children = [{Sample.Registry, name: Sample.Registry}]
+    children = [
+      {DynamicSupervisor, name: Sample.BucketSupervisor, strategy: :one_for_one},
+      {Sample.Registry, name: Sample.Registry}
+    ]
 
     Supervisor.init(children, strategy: :one_for_one)
   end

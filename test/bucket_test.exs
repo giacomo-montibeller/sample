@@ -21,4 +21,7 @@ defmodule BucketTest do
     assert Sample.Bucket.get(bucket, "milk") == nil
   end
 
+  test "are temporary workers" do
+    assert Supervisor.child_spec(Sample.Bucket, []).restart == :temporary
+  end
 end

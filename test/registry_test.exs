@@ -25,4 +25,12 @@ defmodule Sample.RegistryTest do
 
     assert Sample.Registry.lookup(registry, "shopping") == :error
   end
+
+  test "removes bucket on crash", %{registry: registry} do
+    Sample.Registry.create(registry, "shopping")
+    {:ok, bucket} = Sample.Registry.lookup(registry, "shopping")
+
+    Agent.stop(bucket, :shutdown)
+    assert Sample.Registry.lookup(registry, "shopping") == :error
+  end
 end

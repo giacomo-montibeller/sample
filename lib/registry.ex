@@ -35,7 +35,7 @@ defmodule Sample.Registry do
     if Map.has_key?(buckets, key) do
       {:noreply, {buckets, refs}}
     else
-      {:ok, bucket} = Sample.Bucket.start_link([])
+      {:ok, bucket} = DynamicSupervisor.start_child(Sample.BucketSupervisor, Sample.Bucket)
       ref = Process.monitor(bucket)
       refs = Map.put(refs, ref, key)
       buckets = Map.put(buckets, key, bucket)
