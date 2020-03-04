@@ -1,9 +1,9 @@
 defmodule Sample.RegistryTest do
   use ExUnit.Case, async: true
 
-  setup do
-    registry = start_supervised!(Sample.Registry)
-    %{registry: registry}
+  setup context do
+    start_supervised!({Sample.Registry, name: context.test})
+    %{registry: context.test}
   end
 
   test "retrieves an error if bucket does not exists", %{registry: registry} do
@@ -23,6 +23,9 @@ defmodule Sample.RegistryTest do
     {:ok, bucket} = Sample.Registry.lookup(registry, "shopping")
     Agent.stop(bucket)
 
+    # make a sync call to wait the DOWN message
+    Sample.Registry.create(registry, "bogus")
+
     assert Sample.Registry.lookup(registry, "shopping") == :error
   end
 
@@ -31,6 +34,10 @@ defmodule Sample.RegistryTest do
     {:ok, bucket} = Sample.Registry.lookup(registry, "shopping")
 
     Agent.stop(bucket, :shutdown)
+
+    # make a sync call to wait the DOWN message
+    Sample.Registry.create(registry, "bogus")
+
     assert Sample.Registry.lookup(registry, "shopping") == :error
   end
 end

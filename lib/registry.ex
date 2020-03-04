@@ -4,49 +4,48 @@ defmodule Sample.Registry do
   # Client
 
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, :ok, opts)
+    registry = Keyword.fetch!(opts, :name)
+    GenServer.start_link(__MODULE__, registry, opts)
   end
 
   def lookup(registry, key) do
-    GenServer.call(registry, {:lookup, key})
+    case :ets.lookup(registry, key) do
+      [{^key, pid}] -> {:ok, pid}
+      [] -> :error
+    end
   end
 
   def create(registry, key) do
-    GenServer.cast(registry, {:create, key})
+    GenServer.call(registry, {:create, key})
   end
 
   # Server
 
   @impl true
-  def init(:ok) do
-    buckets = %{}
+  def init(table) do
+    buckets = :ets.new(table, [:named_table, read_concurrency: true])
     refs = %{}
     {:ok, {buckets, refs}}
   end
 
   @impl true
-  def handle_call({:lookup, key}, _, state) do
-    {buckets, _} = state
-    {:reply, Map.fetch(buckets, key), state}
-  end
-
-  @impl true
-  def handle_cast({:create, key}, {buckets, refs}) do
-    if Map.has_key?(buckets, key) do
-      {:noreply, {buckets, refs}}
-    else
-      {:ok, bucket} = DynamicSupervisor.start_child(Sample.BucketSupervisor, Sample.Bucket)
-      ref = Process.monitor(bucket)
-      refs = Map.put(refs, ref, key)
-      buckets = Map.put(buckets, key, bucket)
-      {:noreply, {buckets, refs}}
+  def handle_call({:create, key}, _from, {buckets, refs}) do
+    case lookup(buckets, key) do
+      {:ok, pid} ->
+        {:reply, pid, {buckets, refs}}
+      :error ->
+        {:ok, pid} = DynamicSupervisor.start_child(Sample.BucketSupervisor, Sample.Bucket)
+        ref = Process.monitor(pid)
+        refs = Map.put(refs, ref, key)
+        :ets.insert(buckets, {key, pid})
+        {:reply, pid, {buckets, refs}}
     end
   end
 
   @impl true
   def handle_info({:DOWN, ref, :process, _, _}, {buckets, refs}) do
     {key, refs} = Map.pop(refs, ref)
-    buckets = Map.delete(buckets, key)
+    :ets.delete(buckets, key)
     {:noreply, {buckets, refs}}
   end
 
