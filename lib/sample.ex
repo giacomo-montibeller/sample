@@ -1,18 +1,8 @@
 defmodule Sample do
-  @moduledoc """
-  Documentation for `Sample`.
-  """
+  use Application
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Sample.hello()
-      :world
-
-  """
-  def hello do
-    :world
+  @impl true
+  def start(_type, _args) do
+    Sample.Supervisor.start_link(name: Sample.Supervisor)
   end
 end
